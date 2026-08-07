@@ -10,10 +10,9 @@ dhcp_values:
     - startAddress: "10.20.40.241"
       endAddress: "10.20.40.254"
 
-  # Opt in to the failover settings from sites/configValues.yaml, with no
-  # per-cluster overrides. relationshipName is omitted on purpose — it derives
-  # <scopeName>-failover.
+  # No failover key: the whole block is inherited from sites/configValues.yaml,
+  # and relationshipName derives <scopeName>-failover.
   #
-  # `{}` and not a bare `failover:`. A bare key is YAML null, and null *removes*
-  # the inherited block rather than accepting it; `{}` deep-merges and keeps it.
-  failover: {}
+  # To opt this cluster OUT of the inherited failover, write `failover: null`
+  # explicitly. Do not leave a bare `failover:` — that is YAML null too, so it
+  # silently means "no failover" rather than "take the defaults".
