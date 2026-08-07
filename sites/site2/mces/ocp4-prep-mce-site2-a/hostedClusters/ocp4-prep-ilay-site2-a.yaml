@@ -1,0 +1,17 @@
+dhcp_values:
+  # scopeName omitted: derives from this file's name.
+  network: "10.20.50.0"
+  startRange: "10.20.50.11"
+  endRange: "10.20.50.240"
+
+  # Written explicitly rather than derived, so this cluster does not take the .254.
+  gateway: "10.20.50.1"
+
+  exclusions:
+    - startAddress: "10.20.50.241"
+      endAddress: "10.20.50.254"
+
+  # Opts out of the failover inherited from sites/configValues.yaml. This has to be an
+  # explicit null: Helm deep-merges mappings, so `failover: {}` would keep the inherited
+  # block instead of removing it.
+  failover: null

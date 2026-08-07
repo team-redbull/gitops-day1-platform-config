@@ -1,0 +1,18 @@
+dhcp_values:
+  # scopeName omitted: derives from this file's name.
+  # subnetMask and gateway omitted: derive 255.255.255.0 and .254.
+  network: "10.20.41.0"
+  startRange: "10.20.41.11"
+  endRange: "10.20.41.240"
+
+  # Options 66/67. Both keys or neither — half a pair is refused by the API and CI.
+  pxe:
+    server: "boot.site1.lab.local"
+    bootfile: "snponly.efi"
+
+  exclusions:
+    - startAddress: "10.20.41.1"
+      endAddress: "10.20.41.10"
+
+  # No failover key: the whole block is inherited from sites/configValues.yaml and
+  # relationshipName derives <scopeName>-failover.
