@@ -1,0 +1,4 @@
+dhcp_values:
+  dns:
+    extraServers:
+      - "10.50.1.7"

@@ -1,0 +1,14 @@
+dhcp_values:
+  scopeName: "ocp4-prep-herzi-site1-a"
+  network: "10.20.40.0"
+  startRange: "10.20.40.11"
+  endRange: "10.20.40.240"
+
+  exclusions:
+    - startAddress: "10.20.40.1"
+      endAddress: "10.20.40.10"
+    - startAddress: "10.20.40.241"
+      endAddress: "10.20.40.254"
+
+  failover:
+    relationshipName: "ocp4-prep-herzi-site1-a-failover"
