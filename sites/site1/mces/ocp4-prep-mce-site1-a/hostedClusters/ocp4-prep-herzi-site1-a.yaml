@@ -1,5 +1,5 @@
 dhcp_values:
-  scopeName: "ocp4-prep-herzi-site1-a"
+  # scopeName is omitted on purpose: it derives from this file's name.
   network: "10.20.40.0"
   startRange: "10.20.40.11"
   endRange: "10.20.40.240"
@@ -9,10 +9,3 @@ dhcp_values:
       endAddress: "10.20.40.10"
     - startAddress: "10.20.40.241"
       endAddress: "10.20.40.254"
-
-  # No failover key: the whole block is inherited from sites/configValues.yaml,
-  # and relationshipName derives <scopeName>-failover.
-  #
-  # To opt this cluster OUT of the inherited failover, write `failover: null`
-  # explicitly. Do not leave a bare `failover:` — that is YAML null too, so it
-  # silently means "no failover" rather than "take the defaults".

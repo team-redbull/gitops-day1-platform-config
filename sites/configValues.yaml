@@ -1,5 +1,4 @@
 dhcp_values:
-  subnetMask: "255.255.255.0"
   leaseDurationDays: 8
 
   dns:
@@ -9,15 +8,6 @@ dhcp_values:
     domain: "cluster-a.lab.local"
 
   failover:
-    # The partner's PRIVATE address, not its public one.
-    #
-    # Both DHCP servers sit in the same VPC and the same security group, and that
-    # group allows the failover ports (135, 647, 49152-65535) with itself as the
-    # source — so the rules only match traffic between the two ENIs. Addressing
-    # the partner by its public IP (52.0.198.143) sources the traffic from the
-    # primary's public address instead, matches no rule, and
-    # Add-DhcpServerv4Failover dies with WIN32 1722 (RPC_S_SERVER_UNAVAILABLE)
-    # after a 21-second connect timeout.
     partnerServer: "10.100.1.11"
     mode: "HotStandby"
     serverRole: "Active"
