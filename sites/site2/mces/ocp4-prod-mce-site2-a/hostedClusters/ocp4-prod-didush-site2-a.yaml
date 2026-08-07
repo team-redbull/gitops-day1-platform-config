@@ -1,0 +1,20 @@
+dhcp_values:
+  # An explicit scopeName still wins over the name derived from this file, so nothing
+  # already written had to change when the derivation landed.
+  scopeName: "didush-prod-site2"
+  network: "10.20.51.0"
+  startRange: "10.20.51.11"
+  endRange: "10.20.51.240"
+  description: "site2 prod - didush"
+
+  # Present but empty, which is honoured as written: no DHCP option 3 on this scope.
+  # Only an absent key would derive the .254.
+  gateway: null
+
+  exclusions:
+    - startAddress: "10.20.51.1"
+      endAddress: "10.20.51.10"
+
+  failover:
+    # Explicit, so it does not derive "didush-prod-site2-failover".
+    relationshipName: "site2-prod-failover"
