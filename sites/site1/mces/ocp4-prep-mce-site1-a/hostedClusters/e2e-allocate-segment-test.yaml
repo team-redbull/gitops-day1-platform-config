@@ -5,3 +5,17 @@
 # exists because the hcAppset git files generator fails on an empty file; the
 # hostedclusters-setup chart ignores it.
 e2eTest: true
+
+# === Added By Segment-Allocation Workflow ===
+vlanId: 200
+
+dhcp_values:
+  network: "192.10.99.0"
+  startRange: "192.10.99.11"
+  endRange: "192.10.99.240"
+
+  exclusions:
+    - startAddress: "192.10.99.1"
+      endAddress: "192.10.99.10"
+    - startAddress: "192.10.99.241"
+      endAddress: "192.10.99.254"
