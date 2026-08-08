@@ -1,6 +1,6 @@
 dhcp_values:
   network: "10.20.90.0"
-  startRange: "10.20.50.11"
+  startRange: "10.20.90.11"
   endRange: "10.20.90.240"
 
   exclusions:
