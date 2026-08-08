@@ -1,9 +1,0 @@
-# e2e CONFLICT fixture for the allocate-segment workflow — SAFE TO DELETE.
-#
-# Carries an unmarked top-level dhcp_values key (not under the workflow's
-# marker), so a run against this cluster must refuse with
-# ClusterValuesConflictError instead of appending a duplicate YAML key.
-# `network` is deliberately omitted: the hostedclusters-setup chart gates its
-# Crossplane Request on that key, so this fixture renders no scope.
-dhcp_values:
-  startRange: "10.99.99.11"
