@@ -1,0 +1,7 @@
+# e2e test cluster for the allocate-segment workflow — SAFE TO DELETE.
+#
+# Deliberately carries NO dhcp_values: that is the pre-allocation state the
+# workflow finds, appends its marker block to, and pushes. The one key below
+# exists because the hcAppset git files generator fails on an empty file; the
+# hostedclusters-setup chart ignores it.
+e2eTest: true
