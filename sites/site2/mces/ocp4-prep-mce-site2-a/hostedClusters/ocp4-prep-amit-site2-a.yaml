@@ -1,0 +1,8 @@
+dhcp_values:
+  network: "10.20.90.0"
+  startRange: "10.20.50.11"
+  endRange: "10.20.90.240"
+
+  exclusions:
+    - startAddress: "10.20.90.241"
+      endAddress: "10.20.90.254"
