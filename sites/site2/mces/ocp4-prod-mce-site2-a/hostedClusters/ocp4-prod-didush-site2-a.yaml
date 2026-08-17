@@ -18,3 +18,5 @@ dhcp_values:
   failover:
     # Explicit, so it does not derive "didush-prod-site2-failover".
     relationshipName: "site2-prod-failover"
+
+mastertag: 4.16.27-x86_84

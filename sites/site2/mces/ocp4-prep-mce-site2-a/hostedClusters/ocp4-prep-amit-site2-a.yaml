@@ -1,8 +1,23 @@
 dhcp_values:
   network: "10.20.90.0"
-  startRange: "10.20.90.11"
-  endRange: "10.20.90.240"
 
+  # startRange/endRange omitted: the scope distributes the derived .1-.253, and the
+  # exclusions below carve the ends back out of it. That is what makes the derived
+  # range equivalent to the .11-.240 this file used to spell out — Windows holds one
+  # contiguous range, so "everything except the excluded addresses" is expressed as a
+  # wide range plus exclusions, not as narrow bounds.
+
+  # Explicit, and inside the derived range — which is exactly why the first exclusion
+  # has to cover it. Without one, CI and the API both refuse the file rather than let
+  # the server lease the router's address to a client.
+  gateway: "10.20.90.1"
+
+  # Ascending IP order is mandatory: the API always returns exclusions sorted, so any
+  # other order here means Crossplane sees a diff and PUTs on every poll.
   exclusions:
+    - startAddress: "10.20.90.1"
+      endAddress: "10.20.90.10"
     - startAddress: "10.20.90.241"
       endAddress: "10.20.90.254"
+
+mastertag: 4.16.27-x86_84

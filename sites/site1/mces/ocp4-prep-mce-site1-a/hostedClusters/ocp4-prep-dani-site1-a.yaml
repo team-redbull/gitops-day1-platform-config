@@ -1,2 +1,4 @@
 dhcp_values:
   network: "60.20.67.0"
+
+mastertag: 4.16.27-x86_84

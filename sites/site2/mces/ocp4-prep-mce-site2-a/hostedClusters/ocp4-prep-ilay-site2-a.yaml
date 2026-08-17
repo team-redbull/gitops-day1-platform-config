@@ -15,3 +15,5 @@ dhcp_values:
   # explicit null: Helm deep-merges mappings, so `failover: {}` would keep the inherited
   # block instead of removing it.
   failover: null
+
+mastertag: 4.16.27-x86_84

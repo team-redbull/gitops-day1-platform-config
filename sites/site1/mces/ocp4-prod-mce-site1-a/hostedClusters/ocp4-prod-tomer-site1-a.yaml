@@ -21,3 +21,5 @@ dhcp_values:
 
   # No failover key: the whole block is inherited from sites/configValues.yaml and
   # relationshipName derives <scopeName>-failover.
+
+mastertag: 4.16.27-x86_84
