@@ -1,0 +1,6 @@
+dhcp_values:
+  # Minimal cluster file: a subnet, everything else derives or inherits
+  # from sites/configValues.yaml.
+  network: "10.20.42.0"
+
+mastertag: 4.20.9-x86_64

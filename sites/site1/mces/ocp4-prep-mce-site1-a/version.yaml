@@ -1,0 +1,11 @@
+# The OCP version of the MCE hub ITSELF, read at render time by gitops-day2-prod
+# (mcesAppset -> clusters chart -> inClusterApp). day1's charts do not consume
+# this file, and it is deliberately NOT the values.yaml beside it, whose
+# `mastertag` is day1's default version for the hosted clusters under this MCE.
+#
+# THIS FILE MUST CARRY `mastertag` AND NOTHING ELSE — it is loaded as a day2
+# helm value file, so any other top-level key silently becomes a chart value.
+#
+# Hand-maintained: nothing provisions or verifies a hub's version, so this must
+# be updated by whoever upgrades the MCE. The arch suffix is optional.
+mastertag: 4.20.9-x86_64

@@ -20,4 +20,4 @@ dhcp_values:
     - startAddress: "10.20.90.241"
       endAddress: "10.20.90.254"
 
-mastertag: 4.16.27-x86_84
+mastertag: 4.16.27-x86_64

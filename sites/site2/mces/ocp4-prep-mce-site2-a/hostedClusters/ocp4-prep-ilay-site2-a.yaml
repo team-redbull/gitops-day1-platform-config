@@ -16,4 +16,4 @@ dhcp_values:
   # block instead of removing it.
   failover: null
 
-mastertag: 4.16.27-x86_84
+mastertag: 4.16.27-x86_64
