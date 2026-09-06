@@ -1,3 +1,17 @@
 # e2e fixture for allocate-segment — SAFE TO DELETE.
 # Deliberately carries NO dhcp_values: that block is what the workflow appends.
 mastertag: 4.20.9-x86_64
+
+# === Added By Segment-Allocation Workflow ===
+vlanId: 1020
+
+dhcp_values:
+  network: "192.10.20.0"
+  startRange: "192.10.20.11"
+  endRange: "192.10.20.240"
+
+  exclusions:
+    - startAddress: "192.10.20.1"
+      endAddress: "192.10.20.10"
+    - startAddress: "192.10.20.241"
+      endAddress: "192.10.20.254"
