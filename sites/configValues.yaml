@@ -13,3 +13,27 @@ dhcp_values:
     serverRole: "Active"
     reservePercent: 5
     maxClientLeadTimeMinutes: 60
+
+# Which day2 sig repos this platform's hosted clusters are registered with.
+#
+# day2 (gitops-day2-prod) has no registration file: a cluster exists for a sig
+# when sites/<site>/<env>/mces/<mce>/<cluster>/ exists in that sig's repo. The
+# hostedclusters-setup chart runs a Job, once per cluster, that creates exactly
+# that folder in each sig listed here.
+#
+# A name in this list IS the opt-in — there is no enabled: flag. Each name
+# becomes the sig's repo URL and the path inside it; the chart builds both, so
+# nothing else about a sig has to be configured here.
+#
+# Narrow it at any layer below this one — sites/<site>/values.yaml,
+# .../mces/<mce>/values.yaml. Helm REPLACES lists rather than merging them, so a
+# lower layer states the complete set for its scope rather than patching this
+# one:
+#
+#   day2: { copy_to_sigs: [redbull] }   # this scope: redbull only
+#   day2: { copy_to_sigs: [] }          # this scope: none
+#
+# Leave it empty and nothing is registered anywhere — the chart renders no Job at
+# all. That is the intended state until the sig repos are ready for it.
+day2:
+  copy_to_sigs: []
