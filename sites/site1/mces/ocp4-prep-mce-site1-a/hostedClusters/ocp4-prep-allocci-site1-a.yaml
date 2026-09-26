@@ -1,3 +1,14 @@
 # e2e test cluster for the allocate-segment CI step (safe to delete with its branch)
 clusterName: ocp4-prep-allocci-site1-a
 mastertag: 4.20.9-x86_64
+
+# === Added By Segment-Allocation Workflow ===
+vlanId: 1010
+
+dhcp_values:
+  network: "192.10.10.0"
+  exclusions:
+    - startAddress: "192.10.10.1"
+      endAddress: "192.10.10.10"
+    - startAddress: "192.10.10.241"
+      endAddress: "192.10.10.254"
