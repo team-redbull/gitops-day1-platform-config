@@ -59,6 +59,9 @@ CLUSTER_NAME_RE = re.compile(r"^clusterName\s*:\s*[\"']?([^\"'#\s]+)", re.MULTIL
 
 TERMINAL_FAILURES = {"FAILED", "CANCELED", "TERMINATED", "TIMED_OUT"}
 HTTP_TIMEOUT_SECONDS = 30
+# No response at all (0), or a router/gateway between us and the API failing.
+RETRYABLE_START_STATUSES = {0, 502, 503, 504}
+START_ATTEMPTS = 6  # 2+4+8+16+30 s of backoff, about a minute
 
 # TLS verification is OFF, everywhere this runs. The air-gapped environment
 # serves the orchestrator from an internal CA the CI images do not trust, so a
@@ -73,7 +76,10 @@ def log(message: str) -> None:
 
 
 def git(*args: str, check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", *args], check=check, capture_output=True, text=True)
+    result = subprocess.run(["git", *args], capture_output=True, text=True)
+    if check and result.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
+    return result
 
 
 # --- which files ------------------------------------------------------------
@@ -133,11 +139,25 @@ class Api:
 
 def start_run(api: Api, cluster: str, branch: str, segment_type: str) -> str:
     """Start the workflow and return its id. A run already in flight for this
-    cluster (409) is adopted: the id is deterministic, so it is polled the same."""
-    status, body = api.request(
-        "POST", ALLOCATE_PATH,
-        {"cluster": cluster, "values_branch": branch, "type": segment_type},
-    )
+    cluster (409) is adopted: the id is deterministic, so it is polled the same.
+
+    A dropped connection or a gateway error is retried. That is safe because
+    of the same deterministic id: if a lost request did start the run, the
+    retry answers 409 and adopts it, so no second run is ever created."""
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            status, body = api.request(
+                "POST", ALLOCATE_PATH,
+                {"cluster": cluster, "values_branch": branch, "type": segment_type},
+            )
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            status, body = 0, {"detail": str(exc)}
+        if status not in RETRYABLE_START_STATUSES or attempt >= START_ATTEMPTS:
+            break
+        log(f"  start attempt {attempt} failed ({status or 'no response'}): {body.get('detail', body)} — retrying")
+        time.sleep(min(2 ** attempt, 30))
     if status == 202:
         log(f"  started {body['workflow_id']}")
         return body["workflow_id"]
@@ -210,7 +230,11 @@ def main() -> int:
         return 1
     api = Api(api_url)
 
-    files = args.files or changed_cluster_files(args.main_branch)
+    try:
+        files = args.files or changed_cluster_files(args.main_branch)
+    except RuntimeError as exc:
+        log(f"ERROR: could not list this branch's cluster files: {exc}")
+        return 1
     if not files:
         log("No hosted-cluster file added or changed on this branch — nothing to allocate.")
         return 0
