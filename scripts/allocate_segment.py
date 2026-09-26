@@ -239,10 +239,21 @@ def main() -> int:
             failures.append(f"{path}: {exc}")
             log(f"  ERROR: {exc}")
             continue
+        recorded_on = result.get("values_branch")
+        if recorded_on != args.branch:
+            # A 409 adopted a run another pipeline started: the workflow id is
+            # per cluster, not per branch, so two branches defining the SAME
+            # cluster share one run — and its block went to the other branch.
+            failures.append(
+                f"{path}: cluster {cluster} was allocated on branch {recorded_on!r} by another "
+                f"pipeline, not on {args.branch!r} — two branches define the same cluster"
+            )
+            log(f"  ERROR: {failures[-1]}")
+            continue
         log(
             f"  allocated {result.get('segment')} vlan {result.get('vlan_id')} at "
             f"{result.get('site')} — {'pushed ' + str(result.get('commit_sha'))[:10] if result.get('values_updated') else 'already recorded'}"
-            f" on {result.get('values_branch')}"
+            f" on {recorded_on}"
         )
         allocated.append(path)
 
