@@ -1,0 +1,53 @@
+# The allocation step of the cluster pipeline, on GitHub.
+#
+# The real pipeline is GitLab CI (.gitlab-ci.yml, job generate_mc_files) in the
+# air-gapped environment; this GitHub copy of the repo cannot run it. This
+# workflow runs the SAME script on the same trigger — a push to any branch but
+# main that adds or changes a hosted-cluster file — so the allocation flow is
+# exercised end to end here too:
+#
+#   push to a branch  ->  scripts/allocate_segment.py
+#     -> POST allocate-segment {cluster, values_branch: <this branch>}
+#     -> the workflow appends the vlanId + dhcp_values block on THIS branch
+#        (its commit carries a CI-skip marker, so it starts no second run)
+#     -> the script waits for the run, then pulls the block
+#
+# The MachineConfig steps that follow in GitLab are not reproduced here.
+# Merging the branch to main is what creates the DHCP scope (Argo CD reads
+# main only).
+#
+# WORKFLOWS_API_URL is a SECRET, not a variable: this repository is public and
+# the orchestrator API has no authentication, so its address must not appear
+# in the logs.
+name: allocate-segment
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "sites/*/mces/*/hostedClusters/*.yaml"
+      - "scripts/allocate_segment.py"
+      - ".github/workflows/allocate-segment.yml"
+
+permissions:
+  contents: read
+
+# One allocation pass per branch at a time; a newer push waits rather than
+# racing the running one onto the same cluster files.
+concurrency:
+  group: allocate-segment-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  allocate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the script diffs this branch against main
+
+      - name: Allocate segments through the orchestrator
+        env:
+          WORKFLOWS_API_URL: ${{ secrets.WORKFLOWS_API_URL }}
+        run: python3 scripts/allocate_segment.py --branch "$GITHUB_REF_NAME" --pull
