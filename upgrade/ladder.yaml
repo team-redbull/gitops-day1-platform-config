@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=schema/ladder.schema.json
+#
+# The hosted-cluster upgrade ladder: the releases the control plane steps
+# through, one minor at a time, and how far workers may lag behind it.
+# Read by the cluster-upgrade workflow at the start of every run; validated by
+# scripts/validate_upgrade_rules.py. Field reference: upgrade/README.md.
+#
+# How the rungs were chosen (2026-10-31): every consecutive pair below is an
+# upgrade edge in Red Hat's public stable-4.16 ... stable-4.21 graphs
+# (api.openshift.com/api/upgrades_info/v1/graph), taking the newest release of
+# each minor that still has an edge on to the next rung. A cluster first moves
+# to its own minor's rung, e.g. 4.16.27 -> 4.16.55 and 4.20.18 -> 4.20.44 are
+# both stable edges -- the same shape as the observed InPlace path
+# 4.15.0 -> 4.15.41 -> 4.16.27.
+#
+# PROPOSED for the dev copy: the team confirms each rung before production.
+
+schemaVersion: 1
+
+# Team rule: NodePools never fall more than 2 minors behind their control
+# plane. HyperShift itself allows 3 (versioning-support.md, release-4.22), so
+# this is the stricter of the two and may never be raised above 3.
+maxWorkerSkew: 2
+
+# Date the rungs were last checked against the upgrade graph; shown to the
+# approver. null when they never were.
+verifiedAgainstGraph: "2026-10-31"
+
+release:
+  # The ONE full-mirror endpoint. Every hosted cluster's imagePath (and imageHc,
+  # where set) must equal it; the workflow refuses a cluster that points at a
+  # per-version repo.
+  imagePath: registry-internal/openshift-release
+  # The chart's layout (hostedclusters-setup templates/hc.yaml, nodepool.yaml).
+  repo: "{imagePath}/openshift/release-images"
+  tag: "{version}-x86_64"
+  cpoRepo: "{imagePath}/openshift/release"
+  cpoTag: "{version}-x86_64-hypershift"
+
+ladder:
+  - { version: 4.15.41, must: true }
+  - { version: 4.16.55, must: true }
+  - { version: 4.17.58, must: true }
+  - { version: 4.18.56, must: true }
+  - { version: 4.19.53, must: true }
+  - { version: 4.20.44, must: true }
+  - { version: 4.21.40, must: true }
+  # No 4.22 rung yet: as of 2026-10-31, Red Hat publishes 4.21 -> 4.22 edges
+  # only in candidate-4.22, not in fast or stable. Clusters already on 4.22 can
+  # still take a 4.22 z-stream; nothing is moved INTO 4.22 until a verified
+  # rung is added here.

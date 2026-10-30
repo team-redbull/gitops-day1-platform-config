@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "upgrade/schema/ladder.schema.json",
+  "title": "Hosted-cluster upgrade ladder (upgrade/ladder.yaml)",
+  "description": "Structure only. scripts/validate_upgrade_rules.py also enforces what a schema cannot: rungs strictly ascending, and every minor between the lowest and highest rung covered.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "maxWorkerSkew", "verifiedAgainstGraph", "release", "ladder"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "maxWorkerSkew": {
+      "description": "How many minors NodePools may lag their control plane. HyperShift allows 3; the team rule is 2.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "verifiedAgainstGraph": {
+      "description": "YYYY-MM-DD the rungs were last checked against the upgrade graph, or null.",
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["imagePath", "repo", "tag", "cpoRepo", "cpoTag"],
+      "properties": {
+        "imagePath": { "description": "The one full-mirror endpoint.", "type": "string", "minLength": 1 },
+        "repo": { "type": "string", "pattern": "\\{imagePath\\}" },
+        "tag": { "type": "string", "pattern": "\\{version\\}" },
+        "cpoRepo": { "type": "string", "pattern": "\\{imagePath\\}" },
+        "cpoTag": { "type": "string", "pattern": "\\{version\\}" }
+      }
+    },
+    "ladder": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/rung" }
+    }
+  },
+  "$defs": {
+    "rung": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version"],
+      "properties": {
+        "version": {
+          "description": "A bare OCP 4 release, X.Y.Z.",
+          "type": "string",
+          "pattern": "^4\\.[0-9]+\\.[0-9]+$"
+        },
+        "must": { "description": "Never skipped.", "type": "boolean" },
+        "dataPlane": {
+          "description": "required: every NodePool rolls to this release before the control plane moves past it.",
+          "const": "required"
+        }
+      }
+    }
+  }
+}

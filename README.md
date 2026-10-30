@@ -25,6 +25,11 @@ sites/
 Those four files are the merge order Argo CD hands to Helm, last value wins,
 layered on top of the chart's own `values.yaml`.
 
+`upgrade/` holds the hosted-cluster upgrade rules (the release ladder, per-MCE
+limits). The upgrade workflow reads them; Argo CD and the cluster pipeline never
+do. See [`upgrade/README.md`](upgrade/README.md), and validate with
+`python3 scripts/validate_upgrade_rules.py`.
+
 ## `dhcp_values`
 
 The only key this repo owns. `dhcp_api` and `crossplane` are chart-owned: one
