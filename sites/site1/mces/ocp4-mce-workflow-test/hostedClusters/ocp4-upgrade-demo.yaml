@@ -40,8 +40,8 @@ nodepool:
     upgradeType: InPlace
     inPlace:
       maxUnavailable: 1
-    cores: 2
-    memory: 8Gi
+    cores: 4
+    memory: 12Gi
     size: 32Gi
     storageClass: gp3-csi
 
