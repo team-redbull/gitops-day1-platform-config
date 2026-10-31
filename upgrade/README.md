@@ -24,8 +24,10 @@ python3 scripts/validate_upgrade_rules.py
 | `schemaVersion` | `1` |
 | `maxWorkerSkew` | How many minors NodePools may lag their control plane. Team rule `2`; never above `3`, HyperShift's own limit |
 | `verifiedAgainstGraph` | `"YYYY-MM-DD"` the rungs were last checked against the upgrade graph, or `null`. Shown to the approver |
-| `release.imagePath` | The one full-mirror endpoint. Every hosted cluster's `imagePath` (and `imageHc`) must equal it |
-| `release.repo`, `tag`, `cpoRepo`, `cpoTag` | How a release image reference is built, matching the `hostedclusters-setup` chart |
+| `release.imagePath` | The one full-mirror endpoint (or, with `mirrored: false`, the public source). Every hosted cluster's `imagePath` (and `imageHc`) must equal it |
+| `release.repo`, `tag` | How a release image reference is built, matching the `hostedclusters-setup` chart (`<imagePath>/<releaseRepo>:<tag>`) |
+| `release.cpoRepo`, `cpoTag` | The control-plane-operator image, matching the chart's `cpoRepo`. Both or neither; required while `mirrored` is true. Without them the payload's own CPO is used and nothing extra is pinned |
+| `release.mirrored` | `false` when releases come straight from their public source (a connected lab): there is no IDMS to check. Absent means `true`, as in production |
 | `ladder[]` | Rungs, ascending, at least one per minor between the lowest and the highest |
 | `ladder[].version` | A bare release, `4.20.44` (no `-x86_64`) |
 | `ladder[].must` | Never skipped, even in the target's minor |
@@ -64,6 +66,11 @@ article for that release.
 **Adding a rung.** Pick a release with an upgrade edge FROM the previous rung and
 TO the next one (check Red Hat's graph), mirror it, add it, and update
 `verifiedAgainstGraph`.
+
+**This copy is the sandbox's.** Its `release` block points at
+`quay.io/openshift-release-dev/ocp-release` with `mirrored: false` and no CPO
+image; production keeps `registry-internal/openshift-release` with the CPO pair
+(commented in `ladder.yaml`).
 
 ## `mces/<mce>.yaml`
 

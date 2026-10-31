@@ -20,16 +20,25 @@
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
     },
     "release": {
+      "description": "How a release image reference is built. cpoRepo and cpoTag come together or not at all; a mirrored layout (the default) needs them.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["imagePath", "repo", "tag", "cpoRepo", "cpoTag"],
+      "required": ["imagePath", "repo", "tag"],
       "properties": {
-        "imagePath": { "description": "The one full-mirror endpoint.", "type": "string", "minLength": 1 },
+        "imagePath": { "description": "The one full-mirror endpoint, or the public source when mirrored is false.", "type": "string", "minLength": 1 },
         "repo": { "type": "string", "pattern": "\\{imagePath\\}" },
         "tag": { "type": "string", "pattern": "\\{version\\}" },
-        "cpoRepo": { "type": "string", "pattern": "\\{imagePath\\}" },
-        "cpoTag": { "type": "string", "pattern": "\\{version\\}" }
-      }
+        "cpoRepo": { "description": "The control-plane-operator image's repository. Absent: the payload's own CPO, nothing extra pinned.", "type": "string", "pattern": "\\{imagePath\\}" },
+        "cpoTag": { "type": "string", "pattern": "\\{version\\}" },
+        "mirrored": {
+          "description": "false when releases come straight from their public source (a connected lab): no IDMS to check. Absent means true.",
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "dependentRequired": { "cpoRepo": ["cpoTag"], "cpoTag": ["cpoRepo"] },
+      "if": { "not": { "required": ["mirrored"], "properties": { "mirrored": { "const": false } } } },
+      "then": { "required": ["cpoRepo", "cpoTag"] }
     },
     "ladder": {
       "type": "array",

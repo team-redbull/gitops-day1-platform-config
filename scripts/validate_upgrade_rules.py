@@ -10,6 +10,9 @@ schemas (upgrade/schema/) and against the rules a schema cannot express:
     the upgrade workflow moves the control plane one minor at a time and refuses
     to enter a minor nobody verified;
   * maxWorkerSkew is 1..3 (HyperShift allows NodePools 3 minors behind);
+  * the release layout: `mirrored` is true or false (absent = true); cpoRepo and
+    cpoTag come together or not at all, and a mirrored layout needs them, since
+    the chart then renders the control-plane-operator image from that mirror;
   * adminAcks name each gate once, in the CVO's own `ack-4.<minor>-...` form,
     each with the APIRequestCount names of the APIs it covers and its source;
     apiUsageIgnoredUsers lists each user once;
@@ -45,7 +48,9 @@ MCE_DIRS_GLOB = "sites/*/mces/*"
 # fails when they drift).
 LADDER_REQUIRED = {"schemaVersion", "maxWorkerSkew", "verifiedAgainstGraph", "release", "ladder"}
 LADDER_KEYS = LADDER_REQUIRED | {"adminAcks", "apiUsageIgnoredUsers"}
-RELEASE_KEYS = {"imagePath", "repo", "tag", "cpoRepo", "cpoTag"}
+RELEASE_REQUIRED = {"imagePath", "repo", "tag"}
+RELEASE_CPO_KEYS = {"cpoRepo", "cpoTag"}
+RELEASE_KEYS = RELEASE_REQUIRED | RELEASE_CPO_KEYS | {"mirrored"}
 RUNG_KEYS = {"version", "must", "dataPlane"}
 MCE_FILE_KEYS = {"mce", "maxConcurrentControlPlanes"}
 MCE_KEYS = {"version", "supportedHostedVersions"}
@@ -132,10 +137,24 @@ def validate_ladder(data, where=LADDER_FILE):
         errors.append(f"{where}: verifiedAgainstGraph must be YYYY-MM-DD or null, got {verified!r}")
 
     release = data.get("release")
-    if _keys(errors, f"{where}: release", release, RELEASE_KEYS, RELEASE_KEYS):
-        for key in sorted(RELEASE_KEYS & set(release)):
+    if _keys(errors, f"{where}: release", release, RELEASE_KEYS, RELEASE_REQUIRED):
+        for key in sorted((RELEASE_KEYS - {"mirrored"}) & set(release)):
             if not isinstance(release[key], str) or not release[key].strip():
                 errors.append(f"{where}: release.{key} must be a non-empty string")
+        mirrored = release.get("mirrored", True)
+        if not isinstance(mirrored, bool):
+            errors.append(f"{where}: release.mirrored must be true or false, got {mirrored!r}")
+        cpo = RELEASE_CPO_KEYS & set(release)
+        if len(cpo) == 1:
+            errors.append(
+                f"{where}: release.{cpo.pop()} without release."
+                f"{(RELEASE_CPO_KEYS - set(release)).pop()}: set both, or neither"
+            )
+        elif not cpo and mirrored is True:
+            errors.append(
+                f"{where}: a mirrored release (release.mirrored true or absent) needs cpoRepo "
+                "and cpoTag: the chart renders the control-plane-operator image from the mirror"
+            )
         for key, placeholder in (("repo", "{imagePath}"), ("cpoRepo", "{imagePath}"),
                                  ("tag", "{version}"), ("cpoTag", "{version}")):
             if isinstance(release.get(key), str) and placeholder not in release[key]:

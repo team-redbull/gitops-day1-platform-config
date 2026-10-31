@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../schema/mce.schema.json
+#
+# The sandbox MCE (sites/site1/mces/ocp4-mce-workflow-test/), hub of the
+# hosted-cluster upgrade demo. Read 2026-10-31 from the cluster itself:
+# MultiClusterEngine status.currentVersion, and the hypershift/supported-versions
+# ConfigMap, which the workflow compares this list against before every run.
+mce:
+  version: 2.17.3
+  supportedHostedVersions: ["4.22", "4.21", "4.20", "4.19", "4.18", "4.17", "4.16", "4.15", "4.14"]
+
+# A shared lab: one hosted control plane upgrading at a time.
+maxConcurrentControlPlanes: 1

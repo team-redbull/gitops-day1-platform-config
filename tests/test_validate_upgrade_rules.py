@@ -42,6 +42,17 @@ apiUsageIgnoredUsers:
   - system:kube-controller-manager
 """
 
+# A connected lab's layout: releases straight from quay.io, no mirror, no CPO image.
+PUBLIC_RELEASE = """\
+release:
+  imagePath: quay.io/openshift-release-dev
+  repo: "{imagePath}/ocp-release"
+  tag: "{version}-x86_64"
+  mirrored: false
+"""
+
+MIRRORED_RELEASE = GOOD_LADDER.split("release:\n")[1].split("ladder:")[0]
+
 GOOD_MCE = """\
 mce:
   version: 2.17.3
@@ -123,6 +134,45 @@ class TestLadder:
         assert _errors(tmp_path, ladder=ladder) == []
 
 
+def _release(block):
+    """GOOD_LADDER with its release block replaced by `block` (which starts with `release:`)."""
+    return GOOD_LADDER.replace("release:\n" + MIRRORED_RELEASE, block)
+
+
+class TestReleaseLayout:
+    def test_the_production_layout_is_mirrored_with_a_cpo(self, tmp_path):
+        assert "cpoRepo" in MIRRORED_RELEASE and "mirrored" not in MIRRORED_RELEASE
+        assert _errors(tmp_path) == []
+
+    def test_a_public_layout_needs_no_cpo(self, tmp_path):
+        assert _errors(tmp_path, ladder=_release(PUBLIC_RELEASE)) == []
+
+    def test_an_unmirrored_layout_may_still_name_a_cpo(self, tmp_path):
+        ladder = _release(PUBLIC_RELEASE + '  cpoRepo: "{imagePath}/ocp-release"\n  cpoTag: "{version}-x86_64"\n')
+        assert _errors(tmp_path, ladder=ladder) == []
+
+    @pytest.mark.parametrize("mirrored", ["", "  mirrored: true\n"])
+    def test_a_mirrored_layout_needs_the_cpo(self, tmp_path, mirrored):
+        block = PUBLIC_RELEASE.replace("  mirrored: false\n", mirrored)
+        errors = _errors(tmp_path, ladder=_release(block))
+        assert any("needs cpoRepo and cpoTag" in e for e in errors)
+
+    @pytest.mark.parametrize("present, missing", [("cpoRepo", "cpoTag"), ("cpoTag", "cpoRepo")])
+    def test_one_cpo_key_without_the_other(self, tmp_path, present, missing):
+        line = next(l for l in MIRRORED_RELEASE.splitlines(keepends=True) if l.strip().startswith(missing))
+        errors = _errors(tmp_path, ladder=_release("release:\n" + MIRRORED_RELEASE.replace(line, "")))
+        assert any(f"release.{present} without release.{missing}" in e for e in errors)
+
+    @pytest.mark.parametrize("value", ['"false"', "0", "null"])
+    def test_mirrored_must_be_a_boolean(self, tmp_path, value):
+        errors = _errors(tmp_path, ladder=_release(PUBLIC_RELEASE.replace("mirrored: false", f"mirrored: {value}")))
+        assert any("release.mirrored must be true or false" in e for e in errors)
+
+    def test_the_layout_still_needs_its_image_path(self, tmp_path):
+        block = PUBLIC_RELEASE.replace("  imagePath: quay.io/openshift-release-dev\n", "")
+        assert any("missing key 'imagePath'" in e for e in _errors(tmp_path, ladder=_release(block)))
+
+
 class TestAdminAcks:
     def test_admin_acks_are_optional_and_pass_when_well_formed(self, tmp_path):
         assert _errors(tmp_path, ladder=GOOD_LADDER + ADMIN_ACKS) == []
@@ -195,7 +245,11 @@ class TestSchemasMatchTheValidator:
         assert set(schema["required"]) == rules.LADDER_REQUIRED
         assert set(schema["$defs"]["adminAck"]["properties"]) == rules.ADMIN_ACK_KEYS
         assert set(schema["$defs"]["adminAck"]["required"]) == rules.ADMIN_ACK_KEYS
-        assert set(schema["properties"]["release"]["properties"]) == rules.RELEASE_KEYS
+        release = schema["properties"]["release"]
+        assert set(release["properties"]) == rules.RELEASE_KEYS
+        assert set(release["required"]) == rules.RELEASE_REQUIRED
+        assert set(release["dependentRequired"]) == rules.RELEASE_CPO_KEYS
+        assert set(release["then"]["required"]) == rules.RELEASE_CPO_KEYS
         assert set(schema["$defs"]["rung"]["properties"]) == rules.RUNG_KEYS
         assert schema["properties"]["maxWorkerSkew"]["maximum"] == rules.MAX_SKEW_LIMIT
 

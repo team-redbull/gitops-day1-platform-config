@@ -27,15 +27,28 @@ maxWorkerSkew: 2
 verifiedAgainstGraph: "2026-10-31"
 
 release:
-  # The ONE full-mirror endpoint. Every hosted cluster's imagePath (and imageHc,
-  # where set) must equal it; the workflow refuses a cluster that points at a
-  # per-version repo.
-  imagePath: registry-internal/openshift-release
-  # The chart's layout (hostedclusters-setup templates/hc.yaml, nodepool.yaml).
-  repo: "{imagePath}/openshift/release-images"
+  # THIS REPO IS THE SANDBOX DEV COPY: its hosted clusters run on a connected lab
+  # and take releases straight from Red Hat's public repository, so there is no
+  # mirror, no IDMS to check and no separate control-plane-operator image (quay's
+  # ocp-release has no -hypershift tag; the payload's own CPO is used).
+  #
+  # Production (the air-gapped platform-config) keeps its one full mirror:
+  #   imagePath: registry-internal/openshift-release
+  #   repo: "{imagePath}/openshift/release-images"
+  #   tag: "{version}-x86_64"
+  #   cpoRepo: "{imagePath}/openshift/release"
+  #   cpoTag: "{version}-x86_64-hypershift"
+  #   (mirrored: true, the default)
+  #
+  # Every hosted cluster's imagePath (and imageHc, where set) must equal
+  # imagePath; the workflow refuses one that points anywhere else. repo must
+  # describe what the chart renders: <imagePath>/<releaseRepo>:<tag>
+  # (hostedclusters-setup templates/hc.yaml, nodepool.yaml), so the sandbox
+  # clusters set releaseRepo: ocp-release and cpoRepo: "".
+  imagePath: quay.io/openshift-release-dev
+  repo: "{imagePath}/ocp-release"
   tag: "{version}-x86_64"
-  cpoRepo: "{imagePath}/openshift/release"
-  cpoTag: "{version}-x86_64-hypershift"
+  mirrored: false
 
 ladder:
   - { version: 4.15.41, must: true }
