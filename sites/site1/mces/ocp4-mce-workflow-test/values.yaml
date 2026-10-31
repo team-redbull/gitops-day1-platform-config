@@ -38,4 +38,5 @@ disableLdap: true                  # the LDAP identity provider and its bind Sec
 disableOcpadmin: true              # the htpasswd identity provider and its Secret
 disableAPIDNS: true                # api.openshift-<cluster>.example.internal
 sshKeySecretName: ""               # no SSH access to the worker VMs
-etcdEncryptionKeySecretName: ""    # no aescbc key Secret: etcd is not encrypted at rest
+etcdEncryptionKeySecretName: ""    # no key Secret in git: for KubeVirt, HyperShift generates
+                                   # <HostedCluster>-etcd-encryption-key and sets aescbc itself

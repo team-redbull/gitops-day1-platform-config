@@ -22,8 +22,9 @@ imagePath: quay.io/openshift-release-dev
 releaseRepo: ocp-release
 cpoRepo: ""
 
-# Empty: HyperShift derives the domain from the MCE's apps domain and passes the
-# cluster's ingress through the MCE's router.
+# Empty: the chart renders no dns, and HyperShift derives the domain from the
+# MCE's apps domain, writes it into the HostedCluster, and passes the cluster's
+# ingress through the MCE's router.
 baseDomain: ""
 
 # Clear of the MCE's own networks, 10.128.0.0/14 and 172.30.0.0/16.
