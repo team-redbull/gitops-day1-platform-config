@@ -81,3 +81,37 @@ The file name is the MCE's name, as under `sites/*/mces/`.
 | `mce.version` | The MultiClusterEngine version, `2.17.3` |
 | `mce.supportedHostedVersions` | OCP minors its HyperShift operator can host, **quoted** (`"4.22"`; an unquoted `4.20` is a YAML float). Must equal the `hypershift/supported-versions` ConfigMap on that MCE, which the workflow checks before every run |
 | `maxConcurrentControlPlanes` | How many hosted control planes on this MCE may upgrade at the same time |
+
+## `upgrade:` in a cluster file
+
+A cluster file (`sites/<site>/mces/<mce>/hostedClusters/<cluster>.yaml`) may
+carry an `upgrade:` block. Only the file's own block counts, not one in a site
+or MCE layer. The hostedclusters-setup chart never reads it. Every key is
+optional; an unknown key or a bad value fails the run's planning, saying
+which key.
+
+```yaml
+upgrade:
+  profile: zoned                       # generic | zoned
+  nodePoolOrder: [zone-a, zone-b, zone-c]
+  soakMinutes: 30
+  wave: 2
+```
+
+| Key | Meaning |
+|---|---|
+| `profile` | How the NodePools roll: `generic` or `zoned`. Default: `zoned` when any NodePool has a `topology.kubernetes.io/zone` label, else `generic` |
+| `nodePoolOrder` | The NodePools in the order they roll, each once. Default: by zone, else file order. A run's own `nodepool_order` wins |
+| `soakMinutes` | How long a NodePool's gate must hold before the next one may roll. Default: 30 for `zoned`, 0 for `generic` |
+| `wave` | A whole number: `0` a lab cluster, `1` a canary, `2` and up production. No `wave` counts as production |
+
+**What the wave allows.** Only waves 0 and 1 may run without a person at the
+two optional stops. A run asked for `auto_approve: true` (it approves its own
+plan) or `nodepool_mode: auto` (each NodePool rolls after the previous one's
+soak, without the customer's `continue`) fails planning anywhere else, saying
+why. Waves 0 and 1 are also where the upgrade agent will run a known-safe fix
+itself once its tier 1 exists; today it proposes every fix, in every wave. No
+wave skips `confirm-day2` after a control-plane step, an admin ack a client
+still needs, or any stop that needs a person. The workflow's docs page has the
+whole table: `docs/site/cluster-upgrade/upgrade-cluster.html#modes` in
+`team-redbull/workflows`.
