@@ -14,7 +14,7 @@
 platform: kubevirt
 kubevirtInfra: local
 
-mastertag: 4.20.44-x86_64
+mastertag: 4.19.53-x86_64
 
 # Releases straight from quay.io, no mirror. Must match upgrade/ladder.yaml's
 # release block (imagePath, repo; mirrored: false, no CPO image).
@@ -31,21 +31,56 @@ baseDomain: ""
 clusterNetworkCidr: 10.132.0.0/14
 serviceNetworkCidr: 172.31.0.0/16
 
+# A zoned cluster: three NodePools, one per zone, rolled one zone at a time
+# (zone a, b, c), one node each so the whole zone goes at once.
 nodepool:
-  - name: upgrade-demo-workers
-    replicas: 2
+  - name: upgrade-demo-zone-a
+    replicas: 1
     labels:
       allowDeletion: false
-    workertag: 4.20.44-x86_64
+    workertag: 4.19.53-x86_64
     upgradeType: InPlace
     inPlace:
       maxUnavailable: 1
+    nodeLabels:
+      topology.kubernetes.io/zone: a
+    cores: 4
+    memory: 12Gi
+    size: 32Gi
+    storageClass: gp3-csi
+  - name: upgrade-demo-zone-b
+    replicas: 1
+    labels:
+      allowDeletion: false
+    workertag: 4.19.53-x86_64
+    upgradeType: InPlace
+    inPlace:
+      maxUnavailable: 1
+    nodeLabels:
+      topology.kubernetes.io/zone: b
+    cores: 4
+    memory: 12Gi
+    size: 32Gi
+    storageClass: gp3-csi
+  - name: upgrade-demo-zone-c
+    replicas: 1
+    labels:
+      allowDeletion: false
+    workertag: 4.19.53-x86_64
+    upgradeType: InPlace
+    inPlace:
+      maxUnavailable: 1
+    nodeLabels:
+      topology.kubernetes.io/zone: c
     cores: 4
     memory: 12Gi
     size: 32Gi
     storageClass: gp3-csi
 
-# Read by the upgrade workflow, never by the chart. Wave 0: a lab cluster.
+# Read by the upgrade workflow, never by the chart. Wave 0: a lab cluster, so it
+# may approve itself, roll NodePools without a continue, and skip confirm-day2
+# when it has no day2 Application (D27). A 5-minute soak per zone instead of 30.
 upgrade:
-  profile: generic
+  profile: zoned
   wave: 0
+  soakMinutes: 5
