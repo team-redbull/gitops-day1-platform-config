@@ -31,6 +31,17 @@ ladder:
   - { version: 4.21.40 }
 """
 
+ADMIN_ACKS = """\
+adminAcks:
+  - gate: ack-4.19-admissionregistration-v1beta1-api-removals-in-4.20
+    source: Red Hat KCS 7130599
+    apis:
+      - validatingwebhookconfigurations.v1beta1.admissionregistration.k8s.io
+      - validatingadmissionpolicies.v1beta1.admissionregistration.k8s.io
+apiUsageIgnoredUsers:
+  - system:kube-controller-manager
+"""
+
 GOOD_MCE = """\
 mce:
   version: 2.17.3
@@ -112,6 +123,44 @@ class TestLadder:
         assert _errors(tmp_path, ladder=ladder) == []
 
 
+class TestAdminAcks:
+    def test_admin_acks_are_optional_and_pass_when_well_formed(self, tmp_path):
+        assert _errors(tmp_path, ladder=GOOD_LADDER + ADMIN_ACKS) == []
+
+    @pytest.mark.parametrize("gate", [
+        "ack-admissionregistration-in-4.20",      # no minor: the CVO would refuse it
+        "ack-5.1-something",                      # not OCP 4
+        "Ack-4.19-Admissionregistration",         # not how Red Hat names keys
+    ])
+    def test_a_gate_the_cvo_would_not_recognise(self, tmp_path, gate):
+        ladder = GOOD_LADDER + ADMIN_ACKS.replace(
+            "ack-4.19-admissionregistration-v1beta1-api-removals-in-4.20", gate)
+        assert any("admin gate like" in e for e in _errors(tmp_path, ladder=ladder))
+
+    def test_an_api_that_is_not_an_apirequestcount_name(self, tmp_path):
+        ladder = GOOD_LADDER + ADMIN_ACKS.replace(
+            "validatingadmissionpolicies.v1beta1.admissionregistration.k8s.io",
+            "admissionregistration.k8s.io/v1beta1")
+        assert any("APIRequestCount name" in e for e in _errors(tmp_path, ladder=ladder))
+
+    def test_a_gate_without_its_source(self, tmp_path):
+        ladder = GOOD_LADDER + ADMIN_ACKS.replace("    source: Red Hat KCS 7130599\n", "")
+        assert any("missing key 'source'" in e for e in _errors(tmp_path, ladder=ladder))
+
+    def test_a_gate_listed_twice(self, tmp_path):
+        entry = ADMIN_ACKS.split("apiUsageIgnoredUsers")[0].split("adminAcks:\n")[1]
+        ladder = GOOD_LADDER + "adminAcks:\n" + entry + entry
+        assert any("lists ack-4.19" in e and "twice" in e for e in _errors(tmp_path, ladder=ladder))
+
+    def test_an_ignored_user_listed_twice(self, tmp_path):
+        ladder = GOOD_LADDER + ADMIN_ACKS + "  - system:kube-controller-manager\n"
+        assert any("lists system:kube-controller-manager twice" in e for e in _errors(tmp_path, ladder=ladder))
+
+    def test_an_empty_list_is_refused(self, tmp_path):
+        assert any("adminAcks must be a non-empty list" in e
+                   for e in _errors(tmp_path, ladder=GOOD_LADDER + "adminAcks: []\n"))
+
+
 class TestMceFiles:
     def test_a_file_for_an_mce_that_does_not_exist(self, tmp_path):
         errors = _errors(tmp_path, mces={"ocp4-prep-mce-typo": GOOD_MCE})
@@ -143,7 +192,9 @@ class TestSchemasMatchTheValidator:
     def test_ladder_schema(self):
         schema = self._schema("ladder.schema.json")
         assert set(schema["properties"]) == rules.LADDER_KEYS
-        assert set(schema["required"]) == rules.LADDER_KEYS
+        assert set(schema["required"]) == rules.LADDER_REQUIRED
+        assert set(schema["$defs"]["adminAck"]["properties"]) == rules.ADMIN_ACK_KEYS
+        assert set(schema["$defs"]["adminAck"]["required"]) == rules.ADMIN_ACK_KEYS
         assert set(schema["properties"]["release"]["properties"]) == rules.RELEASE_KEYS
         assert set(schema["$defs"]["rung"]["properties"]) == rules.RUNG_KEYS
         assert schema["properties"]["maxWorkerSkew"]["maximum"] == rules.MAX_SKEW_LIMIT

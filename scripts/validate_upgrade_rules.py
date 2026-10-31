@@ -10,6 +10,9 @@ schemas (upgrade/schema/) and against the rules a schema cannot express:
     the upgrade workflow moves the control plane one minor at a time and refuses
     to enter a minor nobody verified;
   * maxWorkerSkew is 1..3 (HyperShift allows NodePools 3 minors behind);
+  * adminAcks name each gate once, in the CVO's own `ack-4.<minor>-...` form,
+    each with the APIRequestCount names of the APIs it covers and its source;
+    apiUsageIgnoredUsers lists each user once;
   * an MCE file is named after an MCE that exists under sites/*/mces/, and its
     supportedHostedVersions are quoted "4.N" strings, without repeats.
 
@@ -40,11 +43,13 @@ MCE_DIRS_GLOB = "sites/*/mces/*"
 
 # Keep these in step with upgrade/schema/*.json (tests/test_validate_upgrade_rules.py
 # fails when they drift).
-LADDER_KEYS = {"schemaVersion", "maxWorkerSkew", "verifiedAgainstGraph", "release", "ladder"}
+LADDER_REQUIRED = {"schemaVersion", "maxWorkerSkew", "verifiedAgainstGraph", "release", "ladder"}
+LADDER_KEYS = LADDER_REQUIRED | {"adminAcks", "apiUsageIgnoredUsers"}
 RELEASE_KEYS = {"imagePath", "repo", "tag", "cpoRepo", "cpoTag"}
 RUNG_KEYS = {"version", "must", "dataPlane"}
 MCE_FILE_KEYS = {"mce", "maxConcurrentControlPlanes"}
 MCE_KEYS = {"version", "supportedHostedVersions"}
+ADMIN_ACK_KEYS = {"gate", "source", "apis"}
 
 # HyperShift supports NodePools up to 3 minors behind their HostedCluster.
 MAX_SKEW_LIMIT = 3
@@ -53,6 +58,13 @@ OCP_RELEASE = re.compile(r"4\.(\d+)\.(\d+)")
 OCP_MINOR = re.compile(r"4\.(\d+)")
 MCE_VERSION = re.compile(r"2\.\d+\.\d+")
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# An admin gate, as the CVO matches it ("^ack-[4-5][.]([0-9]{1,})-[^-]",
+# cluster-version-operator pkg/cvo/upgradeable.go), narrowed to OCP 4 and to
+# the lowercase key names Red Hat uses.
+ADMIN_GATE = re.compile(r"ack-4\.\d+-[a-z0-9][a-z0-9.-]*")
+# An APIRequestCount name: <resource>.<version>[.<group>], e.g.
+# validatingwebhookconfigurations.v1beta1.admissionregistration.k8s.io.
+API_REQUEST_COUNT = re.compile(r"[a-z0-9-]+\.v\d+[a-z0-9]*(\.[a-z0-9-]+)*")
 
 
 class _NoDuplicatesLoader(yaml.SafeLoader):
@@ -100,7 +112,7 @@ def _release_key(version):
 def validate_ladder(data, where=LADDER_FILE):
     """Problems in the ladder file's content, as a list of messages."""
     errors = []
-    if not _keys(errors, where, data, LADDER_KEYS, LADDER_KEYS):
+    if not _keys(errors, where, data, LADDER_KEYS, LADDER_REQUIRED):
         return errors
 
     if data.get("schemaVersion") != 1:
@@ -128,6 +140,8 @@ def validate_ladder(data, where=LADDER_FILE):
                                  ("tag", "{version}"), ("cpoTag", "{version}")):
             if isinstance(release.get(key), str) and placeholder not in release[key]:
                 errors.append(f"{where}: release.{key} must contain {placeholder}")
+
+    errors += validate_admin_acks(data, where)
 
     rungs = data.get("ladder")
     if not isinstance(rungs, list) or not rungs:
@@ -164,6 +178,54 @@ def validate_ladder(data, where=LADDER_FILE):
                     f"{where}: no rung for 4.{minor}; the control plane moves one minor "
                     "at a time, so every minor between the lowest and highest rung needs one"
                 )
+    return errors
+
+
+def _unique_strings(errors, at, values, pattern=None, what="a non-empty string"):
+    """Each item a string (matching `pattern`, when given), none repeated."""
+    if not isinstance(values, list) or not values:
+        errors.append(f"{at} must be a non-empty list")
+        return
+    for index, value in enumerate(values):
+        if not isinstance(value, str) or not value.strip() or (pattern and not pattern.fullmatch(value)):
+            errors.append(f"{at}[{index}] must be {what}, got {value!r}")
+    strings = [v for v in values if isinstance(v, str)]
+    for value in sorted({v for v in strings if strings.count(v) > 1}):
+        errors.append(f"{at} lists {value} twice")
+
+
+def validate_admin_acks(data, where=LADDER_FILE):
+    """Problems in the optional adminAcks and apiUsageIgnoredUsers, as a list of messages."""
+    errors = []
+    if "apiUsageIgnoredUsers" in data:
+        _unique_strings(errors, f"{where}: apiUsageIgnoredUsers", data["apiUsageIgnoredUsers"])
+    if "adminAcks" not in data:
+        return errors
+    acks = data["adminAcks"]
+    if not isinstance(acks, list) or not acks:
+        errors.append(f"{where}: adminAcks must be a non-empty list (leave the key out for none)")
+        return errors
+    gates = []
+    for index, ack in enumerate(acks):
+        at = f"{where}: adminAcks[{index}]"
+        if not _keys(errors, at, ack, ADMIN_ACK_KEYS, ADMIN_ACK_KEYS):
+            continue
+        gate = ack.get("gate")
+        if not isinstance(gate, str) or not ADMIN_GATE.fullmatch(gate):
+            errors.append(
+                f"{at}.gate must be an admin gate like "
+                f"ack-4.19-admissionregistration-v1beta1-api-removals-in-4.20, got {gate!r}"
+            )
+        else:
+            gates.append(gate)
+        if not isinstance(ack.get("source"), str) or not ack["source"].strip():
+            errors.append(f"{at}.source must say where the API list comes from (a Red Hat article)")
+        _unique_strings(
+            errors, f"{at}.apis", ack.get("apis"), API_REQUEST_COUNT,
+            "an APIRequestCount name like validatingwebhookconfigurations.v1beta1.admissionregistration.k8s.io",
+        )
+    for gate in sorted({g for g in gates if gates.count(g) > 1}):
+        errors.append(f"{where}: adminAcks lists {gate} twice")
     return errors
 
 

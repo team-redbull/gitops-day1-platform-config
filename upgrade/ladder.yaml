@@ -49,3 +49,32 @@ ladder:
   # only in candidate-4.22, not in fast or stable. Clusters already on 4.22 can
   # still take a 4.22 z-stream; nothing is moved INTO 4.22 until a verified
   # rung is added here.
+
+# Admin acks the workflow may give by itself (DESIGN §6.2a, decision D16).
+# Some releases make an administrator acknowledge an API removal before the
+# control plane may leave their minor: the hosted cluster's CVO reports
+# Upgradeable=False, reason AdminAckRequired, and HyperShift refuses the minor
+# step until the gate's key is "true" in the hosted cluster's
+# openshift-config/admin-acks. Before such a step the workflow reads the hosted
+# cluster's APIRequestCount for the gate's `apis`:
+#   * nobody called them in the last 24 hours -> the workflow gives the ack;
+#   * somebody did -> it lists who, and waits for a person's approval.
+# A gate missing from this list always waits for a person.
+adminAcks:
+  - gate: ack-4.19-admissionregistration-v1beta1-api-removals-in-4.20
+    source: 'Red Hat KCS 7130599, "Preparing to upgrade to OpenShift Container Platform 4.20"'
+    apis:
+      - mutatingwebhookconfigurations.v1beta1.admissionregistration.k8s.io
+      - validatingwebhookconfigurations.v1beta1.admissionregistration.k8s.io
+      - validatingadmissionpolicies.v1beta1.admissionregistration.k8s.io
+      - validatingadmissionpolicybindings.v1beta1.admissionregistration.k8s.io
+
+# Callers of a gated API that do not count as using it: they walk every
+# registered API, whatever its version (Red Hat KCS 6955985, "Navigating
+# Kubernetes API deprecations and removals"). Add a user here only with the
+# reason next to it.
+apiUsageIgnoredUsers:
+  - system:serviceaccount:kube-system:generic-garbage-collector
+  - system:serviceaccount:kube-system:namespace-controller
+  - system:kube-controller-manager
+  - system:cluster-policy-controller

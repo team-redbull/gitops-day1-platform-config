@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "upgrade/schema/ladder.schema.json",
   "title": "Hosted-cluster upgrade ladder (upgrade/ladder.yaml)",
-  "description": "Structure only. scripts/validate_upgrade_rules.py also enforces what a schema cannot: rungs strictly ascending, and every minor between the lowest and highest rung covered.",
+  "description": "Structure only. scripts/validate_upgrade_rules.py also enforces what a schema cannot: rungs strictly ascending, every minor between the lowest and highest rung covered, and no gate listed twice.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "maxWorkerSkew", "verifiedAgainstGraph", "release", "ladder"],
@@ -35,6 +35,19 @@
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/rung" }
+    },
+    "adminAcks": {
+      "description": "Admin acks the workflow may give itself when no client called the gate's APIs in the last 24 hours; otherwise it waits for a person. A gate not listed always waits for a person.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/adminAck" }
+    },
+    "apiUsageIgnoredUsers": {
+      "description": "Callers of a gated API that do not count as using it, because they walk every registered API (Red Hat KCS 6955985).",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
     }
   },
   "$defs": {
@@ -52,6 +65,30 @@
         "dataPlane": {
           "description": "required: every NodePool rolls to this release before the control plane moves past it.",
           "const": "required"
+        }
+      }
+    },
+    "adminAck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate", "source", "apis"],
+      "properties": {
+        "gate": {
+          "description": "The key in the hosted cluster's openshift-config-managed/admin-gates, as the CVO names it.",
+          "type": "string",
+          "pattern": "^ack-4\\.[0-9]+-[a-z0-9][a-z0-9.-]*$"
+        },
+        "source": {
+          "description": "Where the API list comes from: the Red Hat article for that removal.",
+          "type": "string",
+          "minLength": 1
+        },
+        "apis": {
+          "description": "APIRequestCount names, <resource>.<version>.<group>, of the APIs the gate covers.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9-]+\\.v[0-9]+[a-z0-9]*(\\.[a-z0-9-]+)*$" }
         }
       }
     }
