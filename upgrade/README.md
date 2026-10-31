@@ -110,8 +110,9 @@ two optional stops. A run asked for `auto_approve: true` (it approves its own
 plan) or `nodepool_mode: auto` (each NodePool rolls after the previous one's
 soak, without the customer's `continue`) fails planning anywhere else, saying
 why. Waves 0 and 1 are also where the upgrade agent will run a known-safe fix
-itself once its tier 1 exists; today it proposes every fix, in every wave. No
-wave skips `confirm-day2` after a control-plane step, an admin ack a client
-still needs, or any stop that needs a person. The workflow's docs page has the
+itself once its tier 1 exists; today it proposes every fix, in every wave. Wave
+0 alone goes on without `confirm-day2` after a control-plane step, and only
+when the cluster has no day2 Application on its MCE (nothing to sync). No wave
+skips an admin ack a client still needs, or any stop that needs a person. The workflow's docs page has the
 whole table: `docs/site/cluster-upgrade/upgrade-cluster.html#modes` in
 `team-redbull/workflows`.
