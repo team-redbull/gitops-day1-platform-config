@@ -1,0 +1,50 @@
+# The hosted-cluster upgrade demo (sandbox only).
+#
+# Deployed like every hosted cluster: Argo CD renders helm-charts-hostedclusters-setup
+# with sites/configValues.yaml, sites/site1/values.yaml, this MCE's values.yaml and
+# this file, in that order. The upgrade workflow moves it by editing mastertag and
+# workertag here, then syncing its Application (manual sync).
+#
+# No clusterName: it derives from this file's name minus ocp4-, so the cluster is
+# upgrade-demo — HostedCluster openshift-upgrade-demo in namespace hcp-upgrade-demo,
+# Application ocp4-upgrade-demo.
+
+# KubeVirt VMs on the MCE, where production uses the Agent platform; an InPlace
+# NodePool upgrades the same way on both.
+platform: kubevirt
+kubevirtInfra: local
+
+mastertag: 4.19.53-x86_64
+
+# Releases straight from quay.io, no mirror. Must match upgrade/ladder.yaml's
+# release block (imagePath, repo; mirrored: false, no CPO image).
+imagePath: quay.io/openshift-release-dev
+releaseRepo: ocp-release
+cpoRepo: ""
+
+# Empty: HyperShift derives the domain from the MCE's apps domain and passes the
+# cluster's ingress through the MCE's router.
+baseDomain: ""
+
+# Clear of the MCE's own networks, 10.128.0.0/14 and 172.30.0.0/16.
+clusterNetworkCidr: 10.132.0.0/14
+serviceNetworkCidr: 172.31.0.0/16
+
+nodepool:
+  - name: upgrade-demo-workers
+    replicas: 2
+    labels:
+      allowDeletion: false
+    workertag: 4.19.53-x86_64
+    upgradeType: InPlace
+    inPlace:
+      maxUnavailable: 1
+    cores: 2
+    memory: 8Gi
+    size: 32Gi
+    storageClass: gp3-csi
+
+# Read by the upgrade workflow, never by the chart. Wave 0: a lab cluster.
+upgrade:
+  profile: generic
+  wave: 0

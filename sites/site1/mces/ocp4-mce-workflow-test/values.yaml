@@ -1,0 +1,41 @@
+# The sandbox MCE, ocp4-mce-workflow-test: a connected OCP 4.20 lab cluster with
+# MCE 2.17.3, HyperShift and OpenShift Virtualization, and the hub of the
+# hosted-cluster upgrade demo. Sandbox only; the production MCEs live in the
+# air-gapped values repo.
+#
+# Its hosted clusters are KubeVirt VMs on this cluster and take their releases
+# straight from quay.io (their cluster files say so). Everything else below
+# switches off a piece of the production HostedCluster this lab has nothing for;
+# each line says what.
+
+# Render the HostedCluster and its NodePools (helm-charts-hostedclusters-setup).
+hostedCluster:
+  enabled: true
+
+# No PostDelete hook: these clusters have no dhcp_values, so they hold no
+# segment for release-segment to give back.
+release_segment:
+  workflows_api_url: ""
+
+# Never registered with the day2 sig repos: this MCE's name does not follow
+# ocp4-<env>-<name>-<site>, so the chart could not derive its day2 env.
+day2:
+  copy_to_sigs: []
+
+# The lab's storage class (RWO).
+etcd:
+  storageClassName: gp3-csi
+
+# One replica of each control-plane component: the lab's workers are shared.
+controllerAvailabilityPolicy: SingleReplica
+infrastructureAvailabilityPolicy: SingleReplica
+
+# Production references with nothing behind them here.
+additionalTrustBundleName: ""      # the organisation's CA bundle (user-ca-bundle)
+registriesTrustedCAName: ""        # the mirror registries' CA (custom-registries-config)
+disableProxy: true                 # the proxy's CA (custom-ca)
+disableLdap: true                  # the LDAP identity provider and its bind Secret
+disableOcpadmin: true              # the htpasswd identity provider and its Secret
+disableAPIDNS: true                # api.openshift-<cluster>.example.internal
+sshKeySecretName: ""               # no SSH access to the worker VMs
+etcdEncryptionKeySecretName: ""    # no aescbc key Secret: etcd is not encrypted at rest
