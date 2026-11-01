@@ -38,7 +38,7 @@ nodepool:
     replicas: 1
     labels:
       allowDeletion: false
-    workertag: 4.19.53-x86_64
+    workertag: 4.21.40-x86_64
     upgradeType: InPlace
     inPlace:
       maxUnavailable: 1
