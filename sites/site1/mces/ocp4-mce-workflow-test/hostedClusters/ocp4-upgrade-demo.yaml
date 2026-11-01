@@ -15,7 +15,6 @@ platform: kubevirt
 kubevirtInfra: local
 
 mastertag: 4.19.53-x86_64
-pausedUntil: "true"
 
 # Releases straight from quay.io, no mirror. Must match upgrade/ladder.yaml's
 # release block (imagePath, repo; mirrored: false, no CPO image).
