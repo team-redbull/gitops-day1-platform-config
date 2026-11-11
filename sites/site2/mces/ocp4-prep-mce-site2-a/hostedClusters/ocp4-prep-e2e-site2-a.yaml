@@ -4,7 +4,9 @@ owner:
   anaf: "unit-b"
   mador: "unit-c"
 
+
 mastertag: 4.16.27-x86_64
+
 
 nodepool:
 - infraEnvName: dell-r660-site2-128c-1024gb-5tb
@@ -15,11 +17,14 @@ nodepool:
   - name: nm-conf
   - name: worker-kubeletconfig-reserved
 
+
 day2:
   copy_to_sigs: [redbull]
 
+
 # === Added By Provision-Cluster Workflow ===
 vlanId: 1010
+
 
 dhcp_values:
   network: "193.51.10.0"
@@ -28,3 +33,11 @@ dhcp_values:
       endAddress: "193.51.10.10"
     - startAddress: "193.51.10.241"
       endAddress: "193.51.10.254"
+
+# === Added by CI ===
+mcConfigMap:
+  nm-conf: |
+    apiVersion: machineconfiguration.openshift.io/v1
+    kind: MachineConfig
+    metadata:
+      name: nm-conf-prep-e2e-site2-a
