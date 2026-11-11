@@ -51,6 +51,15 @@ Two merge behaviours worth knowing before editing:
 
 ## Adding a cluster
 
-Drop a `<cluster>.yaml` under the right MCE. A file with no `dhcp_values` block
-renders no DHCP scope, which is the correct outcome for a cluster that does not
-need one.
+Through the orchestrator: `POST /workflows/cluster-lifecycle/provision-cluster?cluster=<name>&mce=<mce folder>`
+with the slim cluster file as the body (`Content-Type: application/yaml`; Swagger
+pre-fills the shape — owner, mastertag, nodepools with their config names, no
+`vlanId`/`dhcp_values`/`mcConfigMap`). The run allocates the segment, pushes the file
+with the `vlanId` + `dhcp_values` block to `provision-cluster/<name>` and opens the
+pull request; merge it, then sync the Application. The old GitHub Actions job that
+called allocate-segment on a pushed branch is gone (2026-11-11): allocate-segment
+no longer writes this repo, and a file pushed by hand without `vlanId` renders no
+DHCP scope.
+
+A file with no `dhcp_values` block renders no DHCP scope, which is the correct
+outcome for a cluster that does not need one.
